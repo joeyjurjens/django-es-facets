@@ -139,7 +139,7 @@ class PriceInputField(forms.MultiValueField, FilterFormField):
 This is a custom form field that allows users to input the min and max price, the form field will then later be processed and do a range filter query based on the users input.
 
 ### Facated Search & views
-`python-elasticsearch-dsl` comes with an abstraction class named [FacetedSearch](https://elasticsearch-dsl.readthedocs.io/en/latest/faceted_search.html). It makes faceted search a lot easier. This package comes with a subclass named `DynamicFacetedSearch`, which as the name implies, adds some dynamic capabilities. If you want to know how the `FacetedSearch` works in depth, I'd suggest reading the docs.
+`python-elasticsearch-dsl` comes with an abstraction class named [FacetedSearch](https://elasticsearch-dsl.readthedocs.io/en/latest/faceted_search.html). It makes faceted search a lot easier. `django-es-kit` comes with a subclass named `DynamicFacetedSearch`, which as the name implies, adds some dynamic capabilities. If you want to know how the `FacetedSearch` works in depth, I'd suggest reading the docs.
 
 In order to create a faceted search page, you must create your own faceted search class, but you **MUST** subclass `DynamicFacetedSearch` and not `FacetedSearch` from `python-elasticsearch-dsl`
 
