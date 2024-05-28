@@ -6,6 +6,8 @@ from django.utils.translation import gettext_lazy as _
 
 
 class FacetField(forms.MultipleChoiceField):
+    widget = forms.CheckboxSelectMultiple
+
     def __init__(self, es_field, **kwargs):
         self.es_field = es_field
         if not "required" in kwargs:
@@ -59,8 +61,6 @@ class TermsFacetField(FacetField):
     The TermsFacetField is a form field that will render ES terms facets as checkboxes by default.
     """
 
-    widget = forms.CheckboxSelectMultiple
-
     def get_es_facet(self):
         return TermsFacet(field=self.es_field)
 
@@ -74,8 +74,6 @@ class RangeOption(dict):
 
 
 class RangeFacetField(FacetField):
-    widget = forms.CheckboxSelectMultiple
-
     def __init__(self, es_field, ranges, **kwargs):
         self.ranges = self._parse_ranges(ranges)
         super().__init__(es_field, **kwargs)
@@ -116,7 +114,7 @@ class RangeFacetField(FacetField):
         self.choices = choices
 
 
-class FilterFormField:
+class FilterField:
     def get_es_filter_query(self, cleaned_data) -> Q:
         raise NotImplementedError(
             "You need to implement the method get_es_filter_query in your subclass."

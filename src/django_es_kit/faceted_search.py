@@ -60,9 +60,3 @@ class DynamicFacetedSearch(FacetedSearch):
         """
         self._s = self.build_search()
         return super().execute()
-
-
-class CatalogueRootFacetedSearch(DynamicFacetedSearch):
-    default_filter_queries = [
-        Q("term", is_public=True),
-    ]

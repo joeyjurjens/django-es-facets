@@ -4,7 +4,7 @@ from django.views.generic import View
 
 from .faceted_search import DynamicFacetedSearch
 from .forms import FacetForm
-from .fields import FacetField, FilterFormField
+from .fields import FacetField, FilterField
 
 logger = logging.getLogger(__name__)
 
@@ -91,7 +91,7 @@ class ESFacetedSearchView(View):
                         "Could not apply filter for field %s. This is likely because of an invalid query parameter for this facet.",
                         form_field.es_field,
                     )
-            elif isinstance(form_field, FilterFormField):
+            elif isinstance(form_field, FilterField):
                 es_filter_query = form_field.get_es_filter_query(value)
                 if es_filter_query:
                     faceted_search.add_filter_query(es_filter_query)
