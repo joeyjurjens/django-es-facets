@@ -15,14 +15,28 @@ class DynamicFacetedSearch(FacetedSearch):
     can also in return be populated from the database.
     2. Allow defining default query filters on the class (default_filter_queries)
     3. Allow dynamically adding extra query filters (add_filter_query)
+    4. Allow pagination on the search results (set_pagination or  page & page_size arguments)
     """
 
     default_filter_queries = []
 
-    def __init__(self, facets, query=None, filters={}, sort=()):
+    def __init__(self, facets, query=None, filters={}, sort=(), page=1, page_size=10):
         self.facets = facets
         self.filter_queries = []
+        self._validate_pagination(page, page_size)
+        self.page = page
+        self.page_size = page_size
         super().__init__(query=query, filters=filters, sort=sort)
+
+    def _validate_pagination(self, page, page_size):
+        if not isinstance(page, int) or not isinstance(page_size, int):
+            raise ValueError("page and page_size must be integers")
+
+        if page < 1:
+            raise ValueError("page must be greater than 0")
+
+        if page_size < 1:
+            raise ValueError("page_size must be greater than 0")
 
     def add_filter_query(self, filter_query):
         if not isinstance(filter_query, Query):
@@ -32,6 +46,11 @@ class DynamicFacetedSearch(FacetedSearch):
             )
             return
         self.filter_queries.append(filter_query)
+
+    def set_pagination(self, page, page_size):
+        self._validate_pagination(page, page_size)
+        self.page = page
+        self.page_size = page_size
 
     def query(self, search, query):
         search = super().query(search, query)
@@ -69,6 +88,14 @@ class DynamicFacetedSearch(FacetedSearch):
             model=model, doc_type=self.doc_types, index=self.index, using=self.using
         )
         return s.response_class(FacetedResponse)
+
+    def paginate(self, search):
+        return search[(self.page - 1) * self.page_size : self.page * self.page_size]
+
+    def build_search(self):
+        s = super().build_search()
+        s = self.paginate(s)
+        return s
 
     def execute(self):
         """

@@ -28,9 +28,16 @@ class ESFacetedSearchView(View):
         if not issubclass(self.get_form_class(), FacetForm):
             raise ValueError("The form_class must be a subclass of FacetForm")
 
+        # Caching, so we don't have to re-instantiate these objects if people were to call these methods multiple times
         self._faceted_search = None
         self._form = None
+        self._es_response = None
         super().__init__(*args, **kwargs)
+
+    def get_context_data(self, **kwargs):
+        form = self.get_form()
+        es_response = self.get_es_response()
+        return {"es_form": form, "es_response": es_response}
 
     def get_search_query(self):
         return None
@@ -64,6 +71,10 @@ class ESFacetedSearchView(View):
         return self._form
 
     def get_es_response(self):
+        # Prevent executing the search multiple times
+        if self._es_response:
+            return self._es_response
+
         faceted_search = self.get_faceted_search()
         form = self.get_form()
 
@@ -79,7 +90,8 @@ class ESFacetedSearchView(View):
         self.apply_filters(form, faceted_search)
 
         # At this point, we have added all filters, so we can return the search object
-        return self.execute_search(faceted_search)
+        self._es_response = faceted_search.execute_search(faceted_search)
+        return self._es_response
 
     def execute_search(self, faceted_search):
         return faceted_search.execute()
@@ -113,8 +125,3 @@ class ESFacetedSearchView(View):
         for field in form.fields.values():
             if isinstance(field, FacetField) and field.es_field in es_response.facets:
                 field.process_facet_buckets(es_response.facets[field.es_field])
-
-    def get_context_data(self, **kwargs):
-        form = self.get_form()
-        es_response = self.get_es_response()
-        return {"es_form": form, "es_response": es_response}
