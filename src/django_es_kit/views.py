@@ -36,9 +36,10 @@ class ESFacetedSearchView(ContextMixin, View):
         super().__init__(*args, **kwargs)
 
     def get_context_data(self, **kwargs):
-        form = self.get_form()
-        es_response = self.get_es_response()
-        return {"es_form": form, "es_response": es_response}
+        ctx = super().get_context_data(**kwargs)
+        ctx["es_form"] = self.get_form()
+        ctx["es_response"] = self.get_es_response()
+        return ctx
 
     def get_search_query(self):
         return None
