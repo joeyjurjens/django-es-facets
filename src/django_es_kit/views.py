@@ -1,6 +1,7 @@
 import logging
 
 from django.views.generic import View
+from django.views.generic.base import ContextMixin
 
 from .faceted_search import DynamicFacetedSearch
 from .forms import FacetForm
@@ -9,7 +10,7 @@ from .fields import FacetField, FilterField
 logger = logging.getLogger(__name__)
 
 
-class ESFacetedSearchView(View):
+class ESFacetedSearchView(ContextMixin, View):
     faceted_search_class = None
     form_class = None
 
