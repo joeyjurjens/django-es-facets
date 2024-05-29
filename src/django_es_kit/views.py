@@ -32,6 +32,9 @@ class ESFacetedSearchView(View):
         self._form = None
         super().__init__(*args, **kwargs)
 
+    def get_search_query(self):
+        return None
+
     def get_faceted_search_class(self):
         return self.faceted_search_class
 
@@ -41,7 +44,7 @@ class ESFacetedSearchView(View):
 
         faceted_search_class = self.get_faceted_search_class()
         self._faceted_search = faceted_search_class(
-            facets=self.get_form().get_es_facets()
+            facets=self.get_form().get_es_facets(), query=self.get_search_query()
         )
         return self._faceted_search
 

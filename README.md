@@ -138,7 +138,7 @@ class PriceInputField(forms.MultiValueField, FilterFormField):
 
 This is a custom form field that allows users to input the min and max price, the form field will then later be processed and do a range filter query based on the users input.
 
-### Facated Search & views
+### Facated Search
 `python-elasticsearch-dsl` comes with an abstraction class named [FacetedSearch](https://elasticsearch-dsl.readthedocs.io/en/latest/faceted_search.html). It makes faceted search a lot easier. `django-es-kit` comes with a subclass named `DynamicFacetedSearch`, which as the name implies, adds some dynamic capabilities. If you want to know how the `FacetedSearch` works in depth, I'd suggest reading the docs.
 
 In order to create a faceted search page, you must create your own faceted search class, but you **MUST** subclass `DynamicFacetedSearch` and not `FacetedSearch` from `python-elasticsearch-dsl`
@@ -182,3 +182,18 @@ Then you will likely want to add the django model results to your context data a
 s = CarDocument.search().filter("term", color="blue")[:30]
 qs = s.to_queryset()
 ```
+
+Also, if you want to allow users to apply search query, you can implement the `get_search_query(self)` method on your `ESFacetedSearchView` subclass. This value will then be added as search query. An example implementation for this method might look like this:
+```python
+class CatalogueView(ESFacetedSearchView):
+    ...
+    def get_search_query(self):
+        return self.request.GET.get("search_query")
+```
+
+If you want to search only within specific fields, you can add the `fields` property on your `DynamicFacetedSearch` subclass like this:
+```python
+class CatalogueFacetedSearch(DynamicFacetedSearch):
+    fields = ["title^3", "upc^5", "description"]
+```
+As you can see, you can also boost fields if you want by adding the `^` symbol followed by the boost value. This is all functionality that comes with the `FacetedSearch` class from `python-elasticsearch-dsl`.
