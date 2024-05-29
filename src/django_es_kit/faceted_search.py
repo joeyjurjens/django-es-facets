@@ -1,7 +1,8 @@
 import logging
 
-from elasticsearch_dsl import FacetedSearch, Q
+from elasticsearch_dsl import FacetedSearch, Q, FacetedResponse
 from elasticsearch_dsl.query import Query
+from django_elasticsearch_dsl.search import Search
 
 logger = logging.getLogger(__name__)
 
@@ -50,6 +51,24 @@ class DynamicFacetedSearch(FacetedSearch):
             search = search.filter(filter_query)
 
         return search
+
+    def search(self):
+        """
+        Make sure to use the django-elasticsearch-dsl Search object, so you can call to_queryset on it.
+        Note: This only works if you have ONE doc_type in your FacetedSearch class.
+        """
+        if len(self.doc_types) > 1:
+            model = None
+            logger.warning(
+                "Your FacetedSearch class has multiple doc_types, this means you can NOT use the to_queryset method"
+            )
+        else:
+            model = self.doc_types[0].Django.model
+
+        s = Search(
+            model=model, doc_type=self.doc_types, index=self.index, using=self.using
+        )
+        return s.response_class(FacetedResponse)
 
     def execute(self):
         """
