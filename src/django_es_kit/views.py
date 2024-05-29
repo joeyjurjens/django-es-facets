@@ -63,7 +63,7 @@ class ESFacetedSearchView(View):
         self._form = form_class()
         return self._form
 
-    def get_es_response(self, form):
+    def get_es_response(self):
         faceted_search = self.get_faceted_search()
         form = self.get_form()
 
@@ -73,11 +73,18 @@ class ESFacetedSearchView(View):
 
         # No filters to apply
         if not form.cleaned_data:
-            es_response = faceted_search.execute()
-            self.reflect_es_response_to_form_fields(es_response, form)
-            return es_response
+            return self.execute_search(faceted_search)
 
         # Apply filters before executing the search based on the form data
+        self.apply_filters(form, faceted_search)
+
+        # At this point, we have added all filters, so we can return the search object
+        return self.execute_search(faceted_search)
+
+    def execute_search(self, faceted_search):
+        return faceted_search.execute()
+
+    def apply_filters(self, form, faceted_search):
         for key, value in form.cleaned_data.items():
             # Fuck off
             if key not in form.fields:
@@ -99,11 +106,6 @@ class ESFacetedSearchView(View):
                 if es_filter_query:
                     faceted_search.add_filter_query(es_filter_query)
 
-        # Add this point we have added all filters, so we can perform the query to ES.
-        es_response = faceted_search.execute()
-        self.reflect_es_response_to_form_fields(es_response, form)
-        return es_response
-
     def reflect_es_response_to_form_fields(self, es_response, form):
         """
         This method adds all available facet choices from the response to the facet form fields.
@@ -114,5 +116,5 @@ class ESFacetedSearchView(View):
 
     def get_context_data(self, **kwargs):
         form = self.get_form()
-        es_response = self.get_es_response(form)
+        es_response = self.get_es_response()
         return {"es_form": form, "es_response": es_response}
