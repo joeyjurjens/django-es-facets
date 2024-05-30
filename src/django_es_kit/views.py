@@ -93,7 +93,7 @@ class ESFacetedSearchView(ContextMixin, View):
         self.apply_filters(form, faceted_search)
 
         # At this point, we have added all filters, so we can return the search object
-        self._es_response = faceted_search.execute_search(faceted_search)
+        self._es_response = self.execute_search(faceted_search)
         self.reflect_es_response_to_form_fields()
         return self._es_response
 

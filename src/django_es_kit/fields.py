@@ -47,7 +47,6 @@ class FacetField(forms.MultipleChoiceField):
         """
         choices = []
         for bucket in buckets:
-            print("bucket: ", bucket)
             key, doc_count, _ = bucket
             choices.append((key, self.format_choice_label(key, doc_count)))
         self.choices = choices
