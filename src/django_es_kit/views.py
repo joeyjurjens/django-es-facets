@@ -73,7 +73,6 @@ class ESFacetedSearchView(ContextMixin, View):
         return self._form
 
     def get_es_response(self):
-        # Prevent executing the search multiple times
         if self._es_response:
             return self._es_response
 
@@ -86,13 +85,16 @@ class ESFacetedSearchView(ContextMixin, View):
 
         # No filters to apply
         if not form.cleaned_data:
-            return self.execute_search(faceted_search)
+            self._es_response = self.execute_search(faceted_search)
+            self.reflect_es_response_to_form_fields()
+            return self._es_response
 
         # Apply filters before executing the search based on the form data
         self.apply_filters(form, faceted_search)
 
         # At this point, we have added all filters, so we can return the search object
         self._es_response = faceted_search.execute_search(faceted_search)
+        self.reflect_es_response_to_form_fields()
         return self._es_response
 
     def execute_search(self, faceted_search):
@@ -120,10 +122,11 @@ class ESFacetedSearchView(ContextMixin, View):
                 if es_filter_query:
                     faceted_search.add_filter_query(es_filter_query)
 
-    def reflect_es_response_to_form_fields(self, es_response, form):
+    def reflect_es_response_to_form_fields(self):
         """
         This method adds all available facet choices from the response to the facet form fields.
         """
-        for field in form.fields.values():
+        es_response = self.get_es_response()
+        for field in self.get_form().fields.values():
             if isinstance(field, FacetField) and field.es_field in es_response.facets:
                 field.process_facet_buckets(es_response.facets[field.es_field])
