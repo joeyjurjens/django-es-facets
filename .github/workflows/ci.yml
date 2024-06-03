@@ -46,3 +46,27 @@ jobs:
         uses: codecov/codecov-action@v4.0.1
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
+
+  lint:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.8
+
+      - name: Install linting dependencies
+        run: |
+          pip install pylint pylint-django
+
+      - name: Run pylint (linting)
+        run: |
+          pylint --rcfile=.pylintrc src/django_es_kit/
+
+      - name: Check for code formatting (dry-run)
+        run: |
+          black --check .

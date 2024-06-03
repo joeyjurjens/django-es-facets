@@ -15,7 +15,7 @@ class FacetField(forms.MultipleChoiceField):
     def __init__(self, es_field, field_type=None, **kwargs):
         self.es_field = es_field
         self.field_type = field_type
-        if not "required" in kwargs:
+        if "required" not in kwargs:
             kwargs["required"] = False
         super().__init__(**kwargs)
 

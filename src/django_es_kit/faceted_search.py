@@ -1,6 +1,6 @@
 import logging
 
-from elasticsearch_dsl import FacetedSearch, Q, FacetedResponse
+from elasticsearch_dsl import FacetedSearch, FacetedResponse
 from elasticsearch_dsl.query import Query
 from django_elasticsearch_dsl.search import Search
 
@@ -20,6 +20,7 @@ class DynamicFacetedSearch(FacetedSearch):
 
     default_filter_queries = []
 
+    # pylint: disable=dangerous-default-value,too-many-arguments
     def __init__(self, facets, query=None, filters={}, sort=(), page=1, page_size=10):
         self.facets = facets
         self.filter_queries = []
@@ -82,6 +83,7 @@ class DynamicFacetedSearch(FacetedSearch):
                 "Your FacetedSearch class has no or multiple doc_types, this means you can NOT use the to_queryset method"
             )
         else:
+            # pylint: disable=unsubscriptable-object
             model = self.doc_types[0].Django.model
 
         s = Search(
