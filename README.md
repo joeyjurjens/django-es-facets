@@ -1,5 +1,7 @@
 # django-es-kit
 
+[![Coverage Status](https://codecov.io/gh/joeyjurjens/django-es-kit/branch/master/graph/badge.svg)](https://codecov.io/gh/joeyjurjens/django-es-kit)
+
 **django-es-kit** is a robust toolkit designed to streamline your interaction with Elasticsearch within your Django application. Leveraging the power of [python-elasticsearch-dsl](https://github.com/elastic/elasticsearch-dsl-py) and [django-elasticsearch-dsl](https://github.com/django-es/django-elasticsearch-dsl/), it simplifies Elasticsearch integration for Django applications.
 
 ## Features

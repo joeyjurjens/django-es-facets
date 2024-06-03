@@ -76,10 +76,10 @@ class DynamicFacetedSearch(FacetedSearch):
         Make sure to use the django-elasticsearch-dsl Search object, so you can call to_queryset on it.
         Note: This only works if you have ONE doc_type in your FacetedSearch class.
         """
-        if len(self.doc_types) > 1:
+        if not self.doc_types or len(self.doc_types) > 1:
             model = None
             logger.warning(
-                "Your FacetedSearch class has multiple doc_types, this means you can NOT use the to_queryset method"
+                "Your FacetedSearch class has no or multiple doc_types, this means you can NOT use the to_queryset method"
             )
         else:
             model = self.doc_types[0].Django.model

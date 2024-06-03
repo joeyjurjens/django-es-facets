@@ -1,15 +1,20 @@
+import logging
+
 from elasticsearch_dsl import Q, Facet, TermsFacet, RangeFacet
 
 from django import forms
 from django.core.exceptions import ValidationError
 from django.utils.translation import gettext_lazy as _
 
+logger = logging.getLogger(__name__)
+
 
 class FacetField(forms.MultipleChoiceField):
     widget = forms.CheckboxSelectMultiple
 
-    def __init__(self, es_field, **kwargs):
+    def __init__(self, es_field, field_type=None, **kwargs):
         self.es_field = es_field
+        self.field_type = field_type
         if not "required" in kwargs:
             kwargs["required"] = False
         super().__init__(**kwargs)
@@ -36,8 +41,22 @@ class FacetField(forms.MultipleChoiceField):
         """
         It's very unlikely that you will need to override this method for other FacetFields.
         As the raw_value is the value we got from ES, so if the user selects this value,
-        it just is the value that will be used as the filter value.
+        it just is the value that will be used as the filter value
         """
+        if self.field_type:
+            values = []
+            for value in raw_value:
+                try:
+                    values.append(self.field_type(value))
+                except ValueError:
+                    logger.error(
+                        "Could not convert value '%s' to type '%s', so the raw value has been used",
+                        value,
+                        self.field_type,
+                    )
+                    values.append(value)
+            return values
+
         return raw_value
 
     def process_facet_buckets(self, buckets):
