@@ -61,7 +61,7 @@ jobs:
 
       - name: Install linting dependencies
         run: |
-          pip install pylint pylint-django
+          pip install .[dev]
 
       - name: Run pylint (linting)
         run: |
