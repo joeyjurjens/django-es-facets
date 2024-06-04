@@ -20,7 +20,7 @@ from ..faceted_search import DynamicFacetedSearch
 
 @pytest.fixture(scope="class")
 def elasticsearch_container():
-    container = ElasticSearchContainer(f"elasticsearch:8.13.4", mem_limit="3G")
+    container = ElasticSearchContainer("elasticsearch:8.13.4", mem_limit="3G")
     container.start()
     # Set python-elasticsearch-dsl host to the container
     connections.configure(default={"hosts": container.get_url()})
@@ -73,6 +73,7 @@ class UsersFacetedSearchView(ESFacetedSearchView):
 
 
 @pytest.mark.usefixtures("elasticsearch_container")
+# pylint: disable=attribute-defined-outside-init
 class TestESFacetedSearchView(TestCase):
     def setUp(self):
         self.factory = RequestFactory()

@@ -12,9 +12,10 @@ logger = logging.getLogger(__name__)
 class FacetField(forms.MultipleChoiceField):
     widget = forms.CheckboxSelectMultiple
 
-    def __init__(self, es_field, field_type=None, **kwargs):
+    def __init__(self, es_field, field_type=None, formatter=None, **kwargs):
         self.es_field = es_field
         self.field_type = field_type
+        self.formatter = formatter
         if "required" not in kwargs:
             kwargs["required"] = False
         super().__init__(**kwargs)
@@ -59,7 +60,7 @@ class FacetField(forms.MultipleChoiceField):
 
         return raw_value
 
-    def process_facet_buckets(self, buckets):
+    def process_facet_buckets(self, request, buckets):
         """
         This method processes the ES facet bucket from the response and updates the available choices.
         A bucket look likes this: [(0, 11, False), (23, 8, False), (7, 6, False)]
@@ -67,11 +68,12 @@ class FacetField(forms.MultipleChoiceField):
         choices = []
         for bucket in buckets:
             key, doc_count, _ = bucket
-            choices.append((key, self.format_choice_label(key, doc_count)))
+            choices.append((key, self.format_choice_label(request, key, doc_count)))
         self.choices = choices
 
-    def format_choice_label(self, key, doc_count):
-        # ToDo: Allow label formatters for displayable facet keys
+    def format_choice_label(self, request, key, doc_count):
+        if self.formatter:
+            return self.formatter(request, key, doc_count)
         return f"{key} ({doc_count})"
 
 
@@ -117,7 +119,7 @@ class RangeFacetField(FacetField):
         ]
         return RangeFacet(field=self.es_field, ranges=ranges)
 
-    def process_facet_buckets(self, buckets):
+    def process_facet_buckets(self, request, buckets):
         """
         This method is overriden from the FacetField class to make use of
         the potential RangeOption label. Also if the doc_count is 0,
@@ -129,7 +131,9 @@ class RangeFacetField(FacetField):
             if doc_count > 0:
                 range_option = self.ranges.get(key)
                 label = range_option.get("label", key) if range_option else key
-                choices.append((key, self.format_choice_label(label, doc_count)))
+                choices.append(
+                    (key, self.format_choice_label(request, label, doc_count))
+                )
         self.choices = choices
 
 

@@ -52,6 +52,7 @@ class ESFacetedSearchView(ContextMixin, View):
             return self._faceted_search
 
         faceted_search_class = self.get_faceted_search_class()
+        # pylint: disable=not-callable
         self._faceted_search = faceted_search_class(
             facets=self.get_form().get_es_facets(), query=self.get_search_query()
         )
@@ -66,9 +67,11 @@ class ESFacetedSearchView(ContextMixin, View):
 
         form_class = self.get_form_class()
         if self.request.GET:
+            # pylint: disable=not-callable
             self._form = form_class(self.request.GET)
             return self._form
 
+        # pylint: disable=not-callable
         self._form = form_class()
         return self._form
 
@@ -131,4 +134,6 @@ class ESFacetedSearchView(ContextMixin, View):
 
         for field in form.fields.values():
             if isinstance(field, FacetField) and field.es_field in es_response.facets:
-                field.process_facet_buckets(es_response.facets[field.es_field])
+                field.process_facet_buckets(
+                    self.request, es_response.facets[field.es_field]
+                )

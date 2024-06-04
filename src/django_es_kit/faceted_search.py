@@ -18,6 +18,7 @@ class DynamicFacetedSearch(FacetedSearch):
     4. Allow pagination on the search results (set_pagination or  page & page_size arguments)
     """
 
+    doc_types = []
     default_filter_queries = []
 
     # pylint: disable=dangerous-default-value,too-many-arguments
@@ -77,13 +78,12 @@ class DynamicFacetedSearch(FacetedSearch):
         Make sure to use the django-elasticsearch-dsl Search object, so you can call to_queryset on it.
         Note: This only works if you have ONE doc_type in your FacetedSearch class.
         """
-        if not self.doc_types or len(self.doc_types) > 1:
+        if len(self.doc_types) > 1:
             model = None
             logger.warning(
                 "Your FacetedSearch class has no or multiple doc_types, this means you can NOT use the to_queryset method"
             )
         else:
-            # pylint: disable=unsubscriptable-object
             model = self.doc_types[0].Django.model
 
         s = Search(
