@@ -88,7 +88,7 @@ This method must return a `Facet` instance, which is from the `python-elasticsea
 - `TermsFacetField`
 - `RangeFacetField`
 
-Those fields are just regular form fields you are used to from Django, except that it has some extra required arguments when adding it to your form. It has the following extra arguments:
+Those fields are just regular form fields you are used to from Django, except that it has some extra arguments when adding it to your form. It has the following extra arguments:
 
 - `es_field` (**required**)
     - This is the field name in elasticsearch you wish users to be able to do filtering on.
@@ -105,11 +105,15 @@ An example form with facet fields would look something like this:
 from django_es_kit.forms import FacetForm
 from django_es_kit.fields import TermsFacetField, RangeFacetField, RangeOption
 
+def num_stock_formatter(request, key, doc_count):
+    return f"{key} pieces ({doc_count})"
+
 class CatalogueForm(FacetForm):
     size = TermsFacetField(es_field="attributes.size", field_type=str)
     num_available = RangeFacetField(
         es_field="num_available",
         field_type=int,
+        formatter=num_stock_formatter,
         ranges=[
             RangeOption(upper=49, label="Up to 50"),
             RangeOption(lower=50, upper=100, label="50 to 100"),
@@ -139,7 +143,7 @@ class FilterField:
 
 It must return a Q type, which is actually a function from `python-elasticsearch-dsl`.
 
-Unlike the `FacetField`, there's no default implementation for `FilterField` as it's up to you how and what the user should be able to filter on. However, in the `django-oscar-es` package I have created the `PriceInputFilterField`, which allows users to enter the minimum and maximum price. That implementation looks like this:
+Unlike the `FacetField`, there's no default implementation for `FilterField` as it's up to you how and what the user should be able to filter on. However, in the `django-oscar-es` package, There's the `PriceInputFilterField`, which allows users to enter the minimum and maximum price. That implementation looks like this:
 
 ```python
 class PriceInputWidget(forms.MultiWidget):

@@ -53,14 +53,27 @@ class UserDocument(Document):
     email = fields.TextField(attr="email", fields={"keyword": fields.KeywordField()})
 
 
+# pylint: disable=unused-argument
+def is_role_formatter(request, key, doc_count):
+    if key is True:
+        return f"Yes ({doc_count})"
+    return f"No ({doc_count})"
+
+
 class UsersFacetForm(FacetForm):
     username = TermsFacetField(es_field="username.keyword", field_type=str)
     first_name = TermsFacetField(es_field="first_name.keyword", field_type=str)
     last_name = TermsFacetField(es_field="last_name.keyword", field_type=str)
     email = TermsFacetField(es_field="email.keyword", field_type=str)
-    is_staff = TermsFacetField(es_field="is_staff", field_type=bool)
-    is_active = TermsFacetField(es_field="is_active", field_type=bool)
-    is_superuser = TermsFacetField(es_field="is_superuser", field_type=bool)
+    is_staff = TermsFacetField(
+        es_field="is_staff", field_type=bool, formatter=is_role_formatter
+    )
+    is_active = TermsFacetField(
+        es_field="is_active", field_type=bool, formatter=is_role_formatter
+    )
+    is_superuser = TermsFacetField(
+        es_field="is_superuser", field_type=bool, formatter=is_role_formatter
+    )
 
 
 class UsersFacetetedSearch(DynamicFacetedSearch):
@@ -184,6 +197,15 @@ class TestESFacetedSearchView(TestCase):
         context = self.view.get_context_data()
         assert "es_form" in context
         assert "es_response" in context
+
+        # Make sure the formatter that is set to the role fields works
+        role_fields = ["is_staff", "is_active", "is_superuser"]
+        for role_field in role_fields:
+            form_field = context["es_form"].fields[role_field]
+            for choice in form_field.choices:
+                value, label = choice
+                assert value in [True, False]
+                assert "Yes" in label or "No" in label
 
     def test_no_filters_get_es_response(self):
         request = self.factory.get("/")
