@@ -11,10 +11,33 @@ logger = logging.getLogger(__name__)
 
 
 class ESFacetedSearchView(ContextMixin, View):
+    """
+    A view for handling faceted search with Elasticsearch.
+
+    This view integrates with Elasticsearch to perform faceted searches and handle form data
+    for filtering search results.
+
+    Attributes:
+        faceted_search_class (type): The class used for faceted search, must be a subclass of `DynamicFacetedSearch`.
+        form_class (type): The form class used for filtering, must be a subclass of `FacetForm`.
+    """
+
     faceted_search_class = None
     form_class = None
 
     def __init__(self, *args, **kwargs):
+        """
+        Initialize the ESFacetedSearchView.
+
+        Args:
+            *args: Variable length argument list.
+            **kwargs: Arbitrary keyword arguments.
+
+        Raises:
+            NotImplementedError: If `faceted_search_class` or `form_class` is not defined.
+            ValueError: If `faceted_search_class` is not a subclass of `DynamicFacetedSearch` or
+                        if `form_class` is not a subclass of `FacetForm`.
+        """
         if not self.get_faceted_search_class():
             raise NotImplementedError("The class must have a faceted_search_class")
 
@@ -29,83 +52,136 @@ class ESFacetedSearchView(ContextMixin, View):
         if not issubclass(self.get_form_class(), FacetForm):
             raise ValueError("The form_class must be a subclass of FacetForm")
 
-        # Caching, so we don't have to re-instantiate these objects if people were to call these methods multiple times
         self._faceted_search = None
         self._form = None
         self._es_response = None
         super().__init__(*args, **kwargs)
 
     def get_context_data(self, **kwargs):
+        """
+        Get the context data for the view.
+
+        Args:
+            **kwargs: Arbitrary keyword arguments.
+
+        Returns:
+            dict: The context data with the form and Elasticsearch response.
+        """
         ctx = super().get_context_data(**kwargs)
         ctx["es_form"] = self.get_form()
         ctx["es_response"] = self.get_es_response()
         return ctx
 
     def get_search_query(self):
+        """
+        Get the search query.
+
+        This method can be overridden to provide a custom search query.
+
+        Returns:
+            None: The default implementation returns None.
+        """
         return None
 
     def get_faceted_search_class(self):
+        """
+        Get the faceted search class.
+
+        Returns:
+            type: The faceted search class.
+        """
         return self.faceted_search_class
 
     def get_faceted_search(self):
+        """
+        Get the faceted search instance.
+
+        Returns:
+            DynamicFacetedSearch: The faceted search instance.
+        """
         if self._faceted_search:
             return self._faceted_search
 
         faceted_search_class = self.get_faceted_search_class()
-        # pylint: disable=not-callable
         self._faceted_search = faceted_search_class(
             facets=self.get_form().get_es_facets(), query=self.get_search_query()
         )
         return self._faceted_search
 
     def get_form_class(self):
+        """
+        Get the form class.
+
+        Returns:
+            type: The form class.
+        """
         return self.form_class
 
     def get_form(self):
+        """
+        Get the form instance.
+
+        Returns:
+            FacetForm: The form instance.
+        """
         if self._form:
             return self._form
 
         form_class = self.get_form_class()
         if self.request.GET:
-            # pylint: disable=not-callable
             self._form = form_class(self.request.GET)
             return self._form
 
-        # pylint: disable=not-callable
         self._form = form_class()
         return self._form
 
     def get_es_response(self):
+        """
+        Get the Elasticsearch response.
+
+        Returns:
+            FacetedResponse: The Elasticsearch response.
+        """
         if self._es_response:
             return self._es_response
 
         faceted_search = self.get_faceted_search()
         form = self.get_form()
 
-        # Trigger cleaned_data population
         if self.request.GET:
             form.is_valid()
 
-        # No filters to apply
         if not form.cleaned_data:
             self._es_response = self.execute_search(faceted_search)
             self.reflect_es_response_to_form_fields(self._es_response, form)
             return self._es_response
 
-        # Apply filters before executing the search based on the form data
         self.apply_filters(form, faceted_search)
-
-        # At this point, we have added all filters, so we can return the search object
         self._es_response = self.execute_search(faceted_search)
         self.reflect_es_response_to_form_fields(self._es_response, form)
         return self._es_response
 
     def execute_search(self, faceted_search):
+        """
+        Execute the faceted search.
+
+        Args:
+            faceted_search (DynamicFacetedSearch): The faceted search instance.
+
+        Returns:
+            FacetedResponse: The search results.
+        """
         return faceted_search.execute()
 
     def apply_filters(self, form, faceted_search):
+        """
+        Apply filters from the form to the faceted search.
+
+        Args:
+            form (FacetForm): The form instance.
+            faceted_search (DynamicFacetedSearch): The faceted search instance.
+        """
         for key, value in form.cleaned_data.items():
-            # Fuck off
             if key not in form.fields:
                 continue
 
@@ -127,7 +203,11 @@ class ESFacetedSearchView(ContextMixin, View):
 
     def reflect_es_response_to_form_fields(self, es_response, form):
         """
-        This method adds all available facet choices from the response to the facet form fields.
+        Add all available facet choices from the response to the form fields.
+
+        Args:
+            es_response (FacetedResponse): The Elasticsearch response.
+            form (FacetForm): The form instance.
         """
         if not hasattr(es_response, "facets"):
             return

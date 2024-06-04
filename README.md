@@ -2,34 +2,76 @@
 
 [![Coverage Status](https://codecov.io/gh/joeyjurjens/django-es-kit/branch/master/graph/badge.svg)](https://codecov.io/gh/joeyjurjens/django-es-kit)
 
-**django-es-kit** is a robust toolkit designed to streamline your interaction with Elasticsearch within your Django application. Leveraging the power of [python-elasticsearch-dsl](https://github.com/elastic/elasticsearch-dsl-py) and [django-elasticsearch-dsl](https://github.com/django-es/django-elasticsearch-dsl/), it simplifies Elasticsearch integration for Django applications.
+**django-es-kit** is a django package that allows you easily create faceted search user interfaces. It's built upon [python-elasticsearch-dsl](https://github.com/elastic/elasticsearch-dsl-py) and [django-elasticsearch-dsl](https://github.com/django-es/django-elasticsearch-dsl/).
+
+This package was initially build for [django-oscar-es](https://github.com/joeyjurjens/django-oscar-es), which is an integration between [django-oscar](https://github.com/django-oscar/django-oscar) and Elasticsearch. While writing this package, I figured it could be handy to create a separate package so I can use it for other projects as well. So the `django-oscar-es` code can be a good reference on how to work with this package.
 
 ## Features
 
-- **Faceted Search:** Simplifies faceted search implementation in Elasticsearch with forms, form fields, and views.
+- **Faceted Search:** A generic view that allows you to easily create faceted search interfaces
+- **Planned:**
+    - A generic view for auto complete / suggestions from Elasticsearch, including with a lightweight Javascript lib.
 
 ## Installation
+
+First, install the package, eg with pip;
 ```bash
 pip install django-es-kit
 ```
 
-### Forms & fields
-`django-es-kit` comes with a prebuilt base `FacetForm` and some prebuilt form fields that allow you to add facets and filter fields to your form, which can then later be used to query Elasticsearch.
+Second, since it depends on [django-elasticsearch-dsl](https://github.com/django-es/django-elasticsearch-dsl/), you'll also need to appropiate django settings. As of writing this, the only required setting that need to be set is:
+```python
+ELASTICSEARCH_DSL={
+    'default': {
+        'hosts': 'localhost:9200',
+        'http_auth': ('username', 'password')
+    }
+}
+```
+Read the docs from [django-elasticsearch-dsl](https://django-elasticsearch-dsl.readthedocs.io/en/latest/settings.html) for all other settings it provides.
 
-In order to create your own `FacetForm`, you'll need to subclass it:
+## Usage
+
+### Faceted Search
+
+In order to create a faceted search user interface, you'll need a few things:
+
+- A `DynamicFacetedSearch` subclass with your own settings
+- A `FacetForm` with `FacetField` and/or `FilterField`
+- A `ESFacetedSearchView` subclass with your created `FacetForm` and `DynamicFacetedSearch` subclasses.
+
+#### DynamicFacetedSearch
+
+`python-elasticsearch-dsl` comes with an abstraction class named [FacetedSearch](https://elasticsearch-dsl.readthedocs.io/en/latest/faceted_search.html). This class makes faceted search a lot easier, as you don't have to manually handle the aggregation logic. However, the implementation is very static and assumes that most (if not all) decisions are made when you initialize the class.
+
+That's where `DynamicFacetedSearch` comes in, it's a subclass of `FacetedSearch` which adds some dynamic capabilities. The usage of `DynamicFacetedSearch` does not differ much from `FacetedSearch`, so if you want to know how this class works in depth I'd suggest reading the docs linked above.
+
+To create your own `FacetedSearch` class, you'd something like this:
 
 ```python
-from django_es_kit.forms import FacetForm
-
-class CatalogueForm(FacetForm):
-    pass
+class CatalogueFacetedSearch(DynamicFacetedSearch):
+    doc_types = [Product]
+    default_filter_queries = [
+        Q("term", is_public=True),
+    ]
 ```
 
-`django-es-kit` comes with the following fields: `TermsFacetField`, `RangeFacetField` and `FilterField`. The `TermsFacetField` and `RangeFacetField` fields are used for facet filtering, while the `FilterField` is used for query filtering (in ES).
+As you can see, the implementation is quite straight forward, you define the doc_type(s) and in this case I also added a default filter, which is a feature from the `DynamicFacetedSearch`.
 
-The `TermsFacetField` and `RangeFacetField` are subclasses of `FacetField`, which can be seen as interface.
-A subclass of `FacetField` must implement the following method:
+#### FacetForm
 
+The FacetForm is a very simple subclass of Django's default Form class. It has a method `get_es_facets` that returns all `FacetField` on the form, which is then later used within the `ESFacetedSearchView`
+
+#### FacetField, TermsFacetField, RangeFacetField & FilterField
+
+In order to allow users to apply filters, you have to add 'special' fields to your `FacetForm`.
+
+There are two types of fields:
+
+- `FacetField`
+- `FilterField`
+
+The `FacetField` is, as the name applies, for facets. It's a base class that fields should subclass while implementing the `get_es_facet` method:
 ```python
 class FacetField(forms.MultipleChoiceField):
     ...
@@ -39,41 +81,35 @@ class FacetField(forms.MultipleChoiceField):
     )
 ```
 
-It must return a Facet instance, this is a class from the `python-elasticsearch-dsl` package.
+This method must return a `Facet` instance, which is from the `python-elasticsearch-dsl` package.
 
-The implementation for `TermsFacetField` is the following:
-```python
-class TermsFacetField(FacetField)
-    ...
-    def get_es_facet(self):
-        return TermsFacet(field=self.es_field)
-```
+`django-es-kit` comes with two prebuilt `FacetField` implementations:
 
-and for `RangeFacetField`:
-```python
-class RangeFacetField(FacetField):
-    ...
-    def get_es_facet(self):
-        ranges = [
-            (key, (range_.get("from"), range_.get("to")))
-            for key, range_ in self.ranges.items()
-        ]
-        return RangeFacet(field=self.es_field, ranges=ranges)
-```
+- `TermsFacetField`
+- `RangeFacetField`
 
-As you can see, the implementation is pretty straight forward and not too difficult. If you want to create your own facet field, you can do so by subclassing `FacetField` and implementing the `get_es_facet` method. The `FacetField` class has some other methods that are used for applying the facet search, so you might need to look at those too. You can take inspiration from the `RangeFacetField`.
+Those fields are just regular form fields you are used to from Django, except that it has some extra required arguments when adding it to your form. It has the following extra arguments:
 
-To use the facet fields, you can simply do so like you would with regular form fields, expect that it requires you to specify the `es_field`, which is the field name inside the Elasticsearch mapping. Also the facet fields are **not** `required` by default, so if you want a facet field to be required you have to explicitly say so by passing `required=True`
+- `es_field` (**required**)
+    - This is the field name in elasticsearch you wish users to be able to do filtering on.
+- `field_type` (**required**)
+    - This is the type within Elasticsearch for said field, this is required as we get the values as strings when users filter on them (GET params)
+- `formatter` (**optional**)
+    - This allows you to format the label being rendered for the available facet options.
 
-An example usage of the facet fields would look like this:
+And the `RangeFacetField` also has a `ranges` argument which is **required**. The ranges are a list of `RangeOption` or `dict`.
+
+An example form with facet fields would look something like this:
+
 ```python
 from django_es_kit.forms import FacetForm
 from django_es_kit.fields import TermsFacetField, RangeFacetField, RangeOption
 
 class CatalogueForm(FacetForm):
-    size = TermsFacetField(es_field="attributes.size")
+    size = TermsFacetField(es_field="attributes.size", field_type=str)
     num_available = RangeFacetField(
         es_field="num_available",
+        field_type=int,
         ranges=[
             RangeOption(upper=49, label="Up to 50"),
             RangeOption(lower=50, upper=100, label="50 to 100"),
@@ -83,6 +119,7 @@ class CatalogueForm(FacetForm):
     # Alternatively, if you don't want to use RangeOption you can also pass a list of dicts:
     num_available = RangeFacetField(
         es_field="num_available",
+        field_type=int,
         ranges=[
             {"upper": 49, "label": "Up to 50"},
             {"lower": 50, "upper": 100, "label": "50 to 100"},
@@ -91,7 +128,7 @@ class CatalogueForm(FacetForm):
     )
 ```
 
-The `FilterField` class isn't an actual form field by itself, it's just a interface that a field must implement:
+And then we have the `FilterField`, this is base class for creating form fields for 'regular' filtering within Elasticsearch. It requires you to implement the `get_es_filter_query` method:
 ```python
 class FilterField:
     def get_es_filter_query(self, cleaned_data) -> Q:
@@ -100,9 +137,9 @@ class FilterField:
         )
 ```
 
-It must return a Q type, which is actually a function from `python-elasticsearch-dsl`. `django-es-kit` has no default implementation for it, as it really depends on what kind of filter you want to do. So in order to add filter fields to your form, you have to subclass a field with `FilterField` and implement the `get_es_filter_query` method.
+It must return a Q type, which is actually a function from `python-elasticsearch-dsl`.
 
-An example implementation looks like this:
+Unlike the `FacetField`, there's no default implementation for `FilterField` as it's up to you how and what the user should be able to filter on. However, in the `django-oscar-es` package I have created the `PriceInputFilterField`, which allows users to enter the minimum and maximum price. That implementation looks like this:
 
 ```python
 class PriceInputWidget(forms.MultiWidget):
@@ -138,54 +175,19 @@ class PriceInputField(forms.MultiValueField, FilterFormField):
         return None
 ```
 
-This is a custom form field that allows users to input the min and max price, the form field will then later be processed and do a range filter query based on the users input.
+#### ESFacetedSearchView
 
-### Facated Search
-`python-elasticsearch-dsl` comes with an abstraction class named [FacetedSearch](https://elasticsearch-dsl.readthedocs.io/en/latest/faceted_search.html). It makes faceted search a lot easier. `django-es-kit` comes with a subclass named `DynamicFacetedSearch`, which as the name implies, adds some dynamic capabilities. If you want to know how the `FacetedSearch` works in depth, I'd suggest reading the docs.
+The `ESFacetedSearchView` is a generic view you can use to create a view for faceted search. In order to use this view, you must set the `form_class` and `faceted_search_class` attributes.
 
-In order to create a faceted search page, you must create your own faceted search class, but you **MUST** subclass `DynamicFacetedSearch` and not `FacetedSearch` from `python-elasticsearch-dsl`
-
-Your own faceted search class will likely be very small and look like this:
-```python
-class CatalogueFacetedSearch(DynamicFacetedSearch):
-    doc_types = [Product]
-    default_filter_queries = [
-        Q("term", is_public=True),
-    ]
-```
-
-This class specifies which doc_types it should use for searching and adds a default filter, which is a feature from the `DynamicFacetedSearch` class and is not required.
-The doc_types must be a a list of classes that subclasses the `Document` from `python-elasticsearch-dsl`, you can find more about it [here](https://elasticsearch-dsl.readthedocs.io/en/latest/persistence.html#document).
-
-Once you've create your faceted search class, you can create your faceted search view. `django-es-kit` comes with a generic view `ESFacetedSearchView`.
-This class requires you to set the `faceted_search_class` and `form_class` class properties. Where `faceted_search_class` a subclass of `DynamicFacetedSearch` and `form_class` is a subclass of `FacetForm`.
-
-The view itself makes no opinions on rendering, but it does add two things to the context data which you can and should use in your templates: `es_form` and `es_response`.
-The `es_form` is the `form_class` you defined, but is now populated with available facet choices from Elasticsearch. The `es_response` is the `Response` class from `python-elasticsearch-dsl` which contains the reponse data, which you can use within your template.
-
-An example view will look something like this:
 ```python
 class CatalogueView(ESFacetedSearchView):
     form_class = CatalogueForm
     faceted_search_class = CatalogueFacetedSearch
-    template_name = "django_oscar_es/products.html"
-
-    def get(self, request, *args, **kwargs):
-        return render(request, self.template_name, self.get_context_data())
 ```
 
-If you make use of `django-elasticsearch-dsl` and you have documents that subclass the Document class they provide, eg;
-```python
-from django_elasticsearch_dsl import Document
-```
+`ESFacetedSearchView` subclasses Django's `View` class, so it does not implement any rendering, this is up to you. What it does do, is add `es_form` and `es_response` to the context. The `es_form` facet fields are now populated with avaialable choices that Elasticsearch returned based on the request.
 
-Then you will likely want to add the django model results to your context data as well. As documented in [django-elasticsearch-dsl](https://django-elasticsearch-dsl.readthedocs.io/en/latest/quickstart.html#search) you can get the queryset like this
-```python
-s = CarDocument.search().filter("term", color="blue")[:30]
-qs = s.to_queryset()
-```
-
-Also, if you want to allow users to apply search query, you can implement the `get_search_query(self)` method on your `ESFacetedSearchView` subclass. This value will then be added as search query. An example implementation for this method might look like this:
+Sometimes you might allow users to also do a search query through a input field. This is also supported, but you must implement the `get_search_query` method to return the value of the query param that should be used for this.
 ```python
 class CatalogueView(ESFacetedSearchView):
     ...
@@ -193,9 +195,9 @@ class CatalogueView(ESFacetedSearchView):
         return self.request.GET.get("search_query")
 ```
 
-If you want to search only within specific fields, you can add the `fields` property on your `DynamicFacetedSearch` subclass like this:
+If you want to only search within specific fields, you can set that on your `FacetedSearch` class:
 ```python
 class CatalogueFacetedSearch(DynamicFacetedSearch):
     fields = ["title^3", "upc^5", "description"]
 ```
-As you can see, you can also boost fields if you want by adding the `^` symbol followed by the boost value. This is all functionality that comes with the `FacetedSearch` class from `python-elasticsearch-dsl`.
+As you can see, you can also boost fields if you want by adding the `^` symbol followed by the boost value.

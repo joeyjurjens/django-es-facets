@@ -54,10 +54,10 @@ class UserDocument(Document):
 
 
 class UsersFacetForm(FacetForm):
-    username = TermsFacetField(es_field="username.keyword")
-    first_name = TermsFacetField(es_field="first_name.keyword")
-    last_name = TermsFacetField(es_field="last_name.keyword")
-    email = TermsFacetField(es_field="email.keyword")
+    username = TermsFacetField(es_field="username.keyword", field_type=str)
+    first_name = TermsFacetField(es_field="first_name.keyword", field_type=str)
+    last_name = TermsFacetField(es_field="last_name.keyword", field_type=str)
+    email = TermsFacetField(es_field="email.keyword", field_type=str)
     is_staff = TermsFacetField(es_field="is_staff", field_type=bool)
     is_active = TermsFacetField(es_field="is_active", field_type=bool)
     is_superuser = TermsFacetField(es_field="is_superuser", field_type=bool)

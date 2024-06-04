@@ -10,9 +10,27 @@ logger = logging.getLogger(__name__)
 
 
 class FacetField(forms.MultipleChoiceField):
+    """
+    A form field for handling Elasticsearch facets as multiple choice fields.
+
+    Attributes:
+        es_field (str): The name of the field in the Elasticsearch index.
+        field_type (type): The type of the field (e.g., int, str, bool).
+        formatter (callable, optional): A function that formats the facet values.
+    """
+
     widget = forms.CheckboxSelectMultiple
 
-    def __init__(self, es_field, field_type=None, formatter=None, **kwargs):
+    def __init__(self, es_field, field_type, formatter=None, **kwargs):
+        """
+        Initialize the FacetField.
+
+        Args:
+            es_field (str): The field name in the Elasticsearch index.
+            field_type (type): The type of the field (e.g., int, str, bool).
+            formatter (callable, optional): A function that formats the facet values.
+            **kwargs: Additional keyword arguments for the field.
+        """
         self.es_field = es_field
         self.field_type = field_type
         self.formatter = formatter
@@ -21,28 +39,41 @@ class FacetField(forms.MultipleChoiceField):
         super().__init__(**kwargs)
 
     def get_es_facet(self) -> Facet:
+        """
+        Get the Elasticsearch facet.
+
+        Returns:
+            Facet: The Elasticsearch facet.
+
+        Raises:
+            NotImplementedError: If the method is not implemented in a subclass.
+        """
         raise NotImplementedError(
             "You need to implement the method get_es_facet in your subclass."
         )
 
     def validate(self, value):
         """
-        Removed the check for valid choices, as this is too complex for FacetFields.
-        Those choices are populated from the ES response and in order to do the ES query,
-        we need to access cleaned_data from already potential faceted fields. We can't access
-        cleaned_data if the form complains about invalid choices. If we don't remove this
-        check, we have to do TWO queries to ES, one to get the available choices and one to
-        get the actual results. This is not efficient and it doesn't really matter if there
-        are invalid choices anyways.
+        Validate the field value.
+
+        Args:
+            value (list): The value to validate.
+
+        Raises:
+            ValidationError: If the field is required but no value is provided.
         """
         if self.required and not value:
             raise ValidationError(self.error_messages["required"], code="required")
 
     def get_es_filter_value(self, raw_value):
         """
-        It's very unlikely that you will need to override this method for other FacetFields.
-        As the raw_value is the value we got from ES, so if the user selects this value,
-        it just is the value that will be used as the filter value
+        Get the Elasticsearch filter value.
+
+        Args:
+            raw_value (list): The raw value from the form input.
+
+        Returns:
+            list: The filtered values converted to the correct type.
         """
         if self.field_type:
             values = []
@@ -62,8 +93,11 @@ class FacetField(forms.MultipleChoiceField):
 
     def process_facet_buckets(self, request, buckets):
         """
-        This method processes the ES facet bucket from the response and updates the available choices.
-        A bucket look likes this: [(0, 11, False), (23, 8, False), (7, 6, False)]
+        Process the Elasticsearch facet buckets and update the field choices.
+
+        Args:
+            request (HttpRequest): The request object.
+            buckets (list): The facet buckets from the Elasticsearch response.
         """
         choices = []
         for bucket in buckets:
@@ -72,6 +106,17 @@ class FacetField(forms.MultipleChoiceField):
         self.choices = choices
 
     def format_choice_label(self, request, key, doc_count):
+        """
+        Format the choice label.
+
+        Args:
+            request (HttpRequest): The request object.
+            key (str): The facet key.
+            doc_count (int): The document count for the facet.
+
+        Returns:
+            str: The formatted choice label.
+        """
         if self.formatter:
             return self.formatter(request, key, doc_count)
         return f"{key} ({doc_count})"
@@ -79,14 +124,32 @@ class FacetField(forms.MultipleChoiceField):
 
 class TermsFacetField(FacetField):
     """
-    The TermsFacetField is a form field that will render ES terms facets as checkboxes by default.
+    A form field that renders Elasticsearch terms facets as checkboxes.
     """
 
     def get_es_facet(self):
+        """
+        Get the Elasticsearch terms facet.
+
+        Returns:
+            TermsFacet: The Elasticsearch terms facet.
+        """
         return TermsFacet(field=self.es_field)
 
 
 class RangeOption(dict):
+    """
+    A class representing a range option for range facets.
+
+    Args:
+        lower (int or float, optional): The lower bound of the range.
+        upper (int or float, optional): The upper bound of the range.
+        label (str, optional): The label for the range option.
+
+    Raises:
+        ValueError: If neither lower nor upper is provided.
+    """
+
     def __init__(self, lower=None, upper=None, label=None):
         if not lower and not upper:
             raise ValueError("Either lower or upper must be provided")
@@ -95,11 +158,32 @@ class RangeOption(dict):
 
 
 class RangeFacetField(FacetField):
-    def __init__(self, es_field, ranges, **kwargs):
+    """
+    A form field that renders Elasticsearch range facets as multiple choice fields.
+
+    Args:
+        es_field (str): The field name in the Elasticsearch index.
+        field_type (type): The type of the field (e.g., int, str, bool).
+        ranges (list): A list of range options.
+        formatter (callable, optional): A function that formats the facet values.
+        **kwargs: Additional keyword arguments for the field.
+    """
+
+    def __init__(self, es_field, field_type, ranges, formatter=None, **kwargs):
         self.ranges = self._parse_ranges(ranges)
-        super().__init__(es_field, **kwargs)
+        super().__init__(es_field, field_type, formatter, **kwargs)
 
     def _parse_ranges(self, ranges):
+        """
+        Parse the range options.
+
+        Args:
+            ranges (list): A list of range options.
+
+        Returns:
+            dict: A dictionary of range options.
+        """
+
         def to_range_option(range_):
             return range_ if isinstance(range_, RangeOption) else RangeOption(**range_)
 
@@ -110,8 +194,10 @@ class RangeFacetField(FacetField):
 
     def get_es_facet(self):
         """
-        Converts the range options into the format expected by the Elasticsearch DSL RangeFacet.
-        The format should be a list of tuples, each containing a key and a range tuple (lower, upper).
+        Get the Elasticsearch range facet.
+
+        Returns:
+            RangeFacet: The Elasticsearch range facet.
         """
         ranges = [
             (key, (range_.get("from"), range_.get("to")))
@@ -121,9 +207,11 @@ class RangeFacetField(FacetField):
 
     def process_facet_buckets(self, request, buckets):
         """
-        This method is overriden from the FacetField class to make use of
-        the potential RangeOption label. Also if the doc_count is 0,
-        we don't want to show the range option.
+        Process the Elasticsearch facet buckets and update the field choices.
+
+        Args:
+            request (HttpRequest): The request object.
+            buckets (list): The facet buckets from the Elasticsearch response.
         """
         choices = []
         for bucket in buckets:
@@ -138,7 +226,23 @@ class RangeFacetField(FacetField):
 
 
 class FilterField:
+    """
+    A base class for form fields that filter Elasticsearch queries.
+    """
+
     def get_es_filter_query(self, cleaned_data) -> Q:
+        """
+        Get the Elasticsearch filter query.
+
+        Args:
+            cleaned_data (dict): The cleaned data from the form.
+
+        Returns:
+            Q: The Elasticsearch filter query.
+
+        Raises:
+            NotImplementedError: If the method is not implemented in a subclass.
+        """
         raise NotImplementedError(
             "You need to implement the method get_es_filter_query in your subclass."
         )
