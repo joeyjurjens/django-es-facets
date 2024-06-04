@@ -37,8 +37,8 @@ Read the docs from [django-elasticsearch-dsl](https://django-elasticsearch-dsl.r
 In order to create a faceted search user interface, you'll need a few things:
 
 - A `DynamicFacetedSearch` subclass with your own settings
-- A `FacetForm` with `FacetField` and/or `FilterField`
-- A `ESFacetedSearchView` subclass with your created `FacetForm` and `DynamicFacetedSearch` subclasses.
+- A `FacetedSearchForm` with `FacetField` and/or `FilterField`
+- A `ESFacetedSearchView` subclass with your created `FacetedSearchForm` and `DynamicFacetedSearch` subclasses.
 
 #### DynamicFacetedSearch
 
@@ -58,13 +58,13 @@ class CatalogueFacetedSearch(DynamicFacetedSearch):
 
 As you can see, the implementation is quite straight forward, you define the doc_type(s) and in this case I also added a default filter, which is a feature from the `DynamicFacetedSearch`.
 
-#### FacetForm
+#### FacetedSearchForm
 
-The FacetForm is a very simple subclass of Django's default Form class. It has a method `get_es_facets` that returns all `FacetField` on the form, which is then later used within the `ESFacetedSearchView`
+The FacetedSearchForm is a very simple subclass of Django's default Form class. It has a method `get_es_facets` that returns all `FacetField` on the form, which is then later used within the `ESFacetedSearchView` to populate the available choices for each `FacetField`
 
 #### FacetField, TermsFacetField, RangeFacetField & FilterField
 
-In order to allow users to apply filters, you have to add 'special' fields to your `FacetForm`.
+In order to allow users to apply filters, you have to add 'special' fields to your `FacetedSearchForm`.
 
 There are two types of fields:
 
@@ -102,13 +102,13 @@ And the `RangeFacetField` also has a `ranges` argument which is **required**. Th
 An example form with facet fields would look something like this:
 
 ```python
-from django_es_kit.forms import FacetForm
+from django_es_kit.forms import FacetedSearchForm
 from django_es_kit.fields import TermsFacetField, RangeFacetField, RangeOption
 
 def num_stock_formatter(request, key, doc_count):
     return f"{key} pieces ({doc_count})"
 
-class CatalogueForm(FacetForm):
+class CatalogueForm(FacetedSearchForm):
     size = TermsFacetField(es_field="attributes.size", field_type=str)
     num_available = RangeFacetField(
         es_field="num_available",

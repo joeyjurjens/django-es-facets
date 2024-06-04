@@ -3,16 +3,16 @@ from django import forms
 from .fields import FacetField
 
 
-class FacetForm(forms.Form):
+class FacetedSearchForm(forms.Form):
     """
-    A form for handling Elasticsearch facets.
+    A form for handling Elasticsearch operations.
 
     This form is used to collect and manage facet fields, making it easier to interact with Elasticsearch.
     """
 
     def __init__(self, *args, **kwargs):
         """
-        Initialize the FacetForm.
+        Initialize the FacetedSearchForm.
 
         Args:
             *args: Variable length argument list.

@@ -246,3 +246,7 @@ class FilterField:
         raise NotImplementedError(
             "You need to implement the method get_es_filter_query in your subclass."
         )
+
+
+class SortingField(forms.ChoiceField):
+    pass

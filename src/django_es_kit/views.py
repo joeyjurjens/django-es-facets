@@ -4,7 +4,7 @@ from django.views.generic import View
 from django.views.generic.base import ContextMixin
 
 from .faceted_search import DynamicFacetedSearch
-from .forms import FacetForm
+from .forms import FacetedSearchForm
 from .fields import FacetField, FilterField
 
 logger = logging.getLogger(__name__)
@@ -19,7 +19,7 @@ class ESFacetedSearchView(ContextMixin, View):
 
     Attributes:
         faceted_search_class (type): The class used for faceted search, must be a subclass of `DynamicFacetedSearch`.
-        form_class (type): The form class used for filtering, must be a subclass of `FacetForm`.
+        form_class (type): The form class used for filtering, must be a subclass of `FacetedSearchForm`.
     """
 
     faceted_search_class = None
@@ -36,7 +36,7 @@ class ESFacetedSearchView(ContextMixin, View):
         Raises:
             NotImplementedError: If `faceted_search_class` or `form_class` is not defined.
             ValueError: If `faceted_search_class` is not a subclass of `DynamicFacetedSearch` or
-                        if `form_class` is not a subclass of `FacetForm`.
+                        if `form_class` is not a subclass of `FacetedSearchForm`.
         """
         if not self.get_faceted_search_class():
             raise NotImplementedError("The class must have a faceted_search_class")
@@ -49,8 +49,8 @@ class ESFacetedSearchView(ContextMixin, View):
         if not self.get_form_class():
             raise NotImplementedError("The class must have a form_class")
 
-        if not issubclass(self.get_form_class(), FacetForm):
-            raise ValueError("The form_class must be a subclass of FacetForm")
+        if not issubclass(self.get_form_class(), FacetedSearchForm):
+            raise ValueError("The form_class must be a subclass of FacetedSearchForm")
 
         self._faceted_search = None
         self._form = None
@@ -123,7 +123,7 @@ class ESFacetedSearchView(ContextMixin, View):
         Get the form instance.
 
         Returns:
-            FacetForm: The form instance.
+            FacetedSearchForm: The form instance.
         """
         if self._form:
             return self._form
@@ -181,7 +181,7 @@ class ESFacetedSearchView(ContextMixin, View):
         Apply filters from the form to the faceted search.
 
         Args:
-            form (FacetForm): The form instance.
+            form (FacetedSearchForm): The form instance.
             faceted_search (DynamicFacetedSearch): The faceted search instance.
         """
         for key, value in form.cleaned_data.items():
@@ -210,7 +210,7 @@ class ESFacetedSearchView(ContextMixin, View):
 
         Args:
             es_response (FacetedResponse): The Elasticsearch response.
-            form (FacetForm): The form instance.
+            form (FacetedSearchForm): The form instance.
         """
         if not hasattr(es_response, "facets"):
             return

@@ -13,7 +13,7 @@ from django.contrib.auth.models import User
 from django.test import RequestFactory, TestCase
 
 from ..views import ESFacetedSearchView
-from ..forms import FacetForm
+from ..forms import FacetedSearchForm
 from ..fields import TermsFacetField
 from ..faceted_search import DynamicFacetedSearch
 
@@ -60,7 +60,7 @@ def is_role_formatter(request, key, doc_count):
     return f"No ({doc_count})"
 
 
-class UsersFacetForm(FacetForm):
+class UsersFacetedSearchForm(FacetedSearchForm):
     username = TermsFacetField(es_field="username.keyword", field_type=str)
     first_name = TermsFacetField(es_field="first_name.keyword", field_type=str)
     last_name = TermsFacetField(es_field="last_name.keyword", field_type=str)
@@ -82,7 +82,7 @@ class UsersFacetetedSearch(DynamicFacetedSearch):
 
 class UsersFacetedSearchView(ESFacetedSearchView):
     faceted_search_class = UsersFacetetedSearch
-    form_class = UsersFacetForm
+    form_class = UsersFacetedSearchForm
 
 
 @pytest.mark.usefixtures("elasticsearch_container")
