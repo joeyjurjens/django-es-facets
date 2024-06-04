@@ -61,7 +61,7 @@ jobs:
 
       - name: Install linting dependencies
         run: |
-          pip install .[dev]
+          pip install .[dev,test]
 
       - name: Run pylint (linting)
         run: |
