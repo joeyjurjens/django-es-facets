@@ -62,14 +62,15 @@ As you can see, the implementation is quite straight forward, you define the doc
 
 The FacetedSearchForm is a very simple subclass of Django's default Form class. It has a method `get_es_facets` that returns all `FacetField` on the form, which is then later used within the `ESFacetedSearchView` to populate the available choices for each `FacetField`
 
-#### FacetField, TermsFacetField, RangeFacetField & FilterField
+#### FacetField, TermsFacetField, RangeFacetField, FilterField & SortField
 
 In order to allow users to apply filters, you have to add 'special' fields to your `FacetedSearchForm`.
 
-There are two types of fields:
+There are three types of fields:
 
 - `FacetField`
 - `FilterField`
+- `SortField`
 
 The `FacetField` is, as the name applies, for facets. It's a base class that fields should subclass while implementing the `get_es_facet` method:
 ```python
@@ -178,6 +179,39 @@ class PriceInputField(forms.MultiValueField, FilterFormField):
             return Q("range", price={"gt": cleaned_data[0], "lt": cleaned_data[1]})
         return None
 ```
+
+The `SortField` allows the users to sort the results. This field is quite straight forward, as it only requires you to set `sort_choices`. The `sort_choices` are a list of tuples containing three items: `key/value`, `label`, `elasticsearch sort`. So the only difference compared to the default `ChoiceField` from Django, is that the tuple now requires a third item to specifiy what Elasticsearch field and which direction to sort on.
+```python
+class ProductFacetedSearchForm(FacetedSearchForm):
+    RELEVANCY = "relevancy"
+    TOP_RATED = "rating"
+    NEWEST = "newest"
+    PRICE_HIGH_TO_LOW = "price-desc"
+    PRICE_LOW_TO_HIGH = "price-asc"
+    TITLE_A_TO_Z = "title-asc"
+    TITLE_Z_TO_A = "title-desc"
+
+    SORT_BY_CHOICES = [
+        (RELEVANCY, _("Relevancy"), "_score"),
+        (TOP_RATED, _("Customer rating"), "-rating"),
+        (NEWEST, _("Newest"), "-date_created"),
+        (PRICE_HIGH_TO_LOW, _("Price high to low"), "-price"),
+        (PRICE_LOW_TO_HIGH, _("Price low to high"), "price"),
+        (TITLE_A_TO_Z, _("Title A to Z"), "title.keyword"),
+        (TITLE_Z_TO_A, _("Title Z to A"), "-title.keyword"),
+    ]
+
+    sort_option = SortField(SORT_BY_CHOICES, required=False)
+```
+
+The third item in the tuple is the same format `python-elasticsearch-dsl` uses, so you can also do things like this:
+```python
+CHOICES = [
+    ("lines", "Order lines", {"lines" : {"order" : "asc", "mode" : "avg"}})
+]
+```
+
+You can read more about it [here](https://elasticsearch-dsl.readthedocs.io/en/latest/search_dsl.html#sorting).
 
 #### ESFacetedSearchView
 

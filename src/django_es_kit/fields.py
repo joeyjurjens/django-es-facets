@@ -248,5 +248,21 @@ class FilterField:
         )
 
 
-class SortingField(forms.ChoiceField):
-    pass
+class SortField(forms.ChoiceField):
+    """
+    A form field for sorting in Elasticsearch queries.
+    """
+
+    def __init__(self, sort_choices, *args, **kwargs):
+        """
+        Initialize the SortField.
+
+        Args:
+            sort_choices (list): A list of tuples representing sorting options (value, label, elasticsearch sort).
+            *args: Positional arguments for the field.
+            **kwargs: Keyword arguments for the field.
+        """
+        choices = [(value, label) for value, label, _ in sort_choices]
+        super().__init__(*args, **kwargs)
+        self.choices = choices
+        self.sort_mapping = {value: sort_field for value, _, sort_field in sort_choices}

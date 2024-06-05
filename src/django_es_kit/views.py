@@ -5,7 +5,7 @@ from django.views.generic.base import ContextMixin
 
 from .faceted_search import DynamicFacetedSearch
 from .forms import FacetedSearchForm
-from .fields import FacetField, FilterField
+from .fields import FacetField, FilterField, SortField
 
 logger = logging.getLogger(__name__)
 
@@ -203,6 +203,10 @@ class ESFacetedSearchView(ContextMixin, View):
                 es_filter_query = form_field.get_es_filter_query(value)
                 if es_filter_query:
                     faceted_search.add_filter_query(es_filter_query)
+            elif isinstance(form_field, SortField):
+                sort_field = form_field.sort_mapping.get(value)
+                if sort_field:
+                    faceted_search.add_sort(sort_field)
 
     def reflect_es_response_to_form_fields(self, es_response, form):
         """
