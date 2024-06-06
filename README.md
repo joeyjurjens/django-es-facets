@@ -239,5 +239,5 @@ Then we have the `ESFacetedSearchListView`, which is a subclass of `ESFacetedSea
 
 In order to use `ESFacetedSearchListView`, you have to meet the following requirements:
 
-- Your `search_class` must have only one Document in the doc_types list.
+- Your `faceted_search_class` must have only one Document in the doc_types list.
 - The Document inside the doc_types list must be a subclass of `django-elasticsearch-dsl` Document, as it requires you to set a Django model which is needed to be able to call the `to_queryset` method.

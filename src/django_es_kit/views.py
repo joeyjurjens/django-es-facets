@@ -39,18 +39,18 @@ class ESFacetedSearchView(ContextMixin, View):
             ValueError: If `faceted_search_class` is not a subclass of `DynamicFacetedSearch` or
                         if `form_class` is not a subclass of `FacetedSearchForm`.
         """
-        if not self.get_faceted_search_class():
+        if not self.faceted_search_class:
             raise NotImplementedError("The class must have a faceted_search_class")
 
-        if not issubclass(self.get_faceted_search_class(), DynamicFacetedSearch):
+        if not issubclass(self.faceted_search_class, DynamicFacetedSearch):
             raise ValueError(
                 "The faceted_search_class must be a subclass of DynamicFacetedSearch"
             )
 
-        if not self.get_form_class():
+        if not self.form_class:
             raise NotImplementedError("The class must have a form_class")
 
-        if not issubclass(self.get_form_class(), FacetedSearchForm):
+        if not issubclass(self.form_class, FacetedSearchForm):
             raise ValueError("The form_class must be a subclass of FacetedSearchForm")
 
         self._faceted_search = None

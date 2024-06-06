@@ -10,9 +10,10 @@ from django_elasticsearch_dsl import fields
 
 from django.core.management import call_command
 from django.contrib.auth.models import User
+from django.http import Http404
 from django.test import RequestFactory, TestCase
 
-from ..views import ESFacetedSearchView
+from ..views import ESFacetedSearchView, ESFacetedSearchListView
 from ..forms import FacetedSearchForm
 from ..fields import TermsFacetField
 from ..faceted_search import DynamicFacetedSearch
@@ -83,6 +84,12 @@ class UsersFacetetedSearch(DynamicFacetedSearch):
 class UsersFacetedSearchView(ESFacetedSearchView):
     faceted_search_class = UsersFacetetedSearch
     form_class = UsersFacetedSearchForm
+
+
+class UsersFacetedSearchListView(ESFacetedSearchListView):
+    faceted_search_class = UsersFacetetedSearch
+    form_class = UsersFacetedSearchForm
+    paginate_by = 5
 
 
 @pytest.mark.usefixtures("elasticsearch_container")
@@ -193,8 +200,8 @@ class TestESFacetedSearchView(TestCase):
 
     def test_get_context_data(self):
         request = self.factory.get("/")
-        self.view.setup(request)
-        context = self.view.get_context_data()
+        response = UsersFacetedSearchListView.as_view()(request)
+        context = response.context_data
         assert "es_form" in context
         assert "es_response" in context
 
@@ -283,3 +290,46 @@ class TestESFacetedSearchView(TestCase):
             response["hits"]["total"]["value"]
             == User.objects.filter(is_superuser=True).count()
         )
+
+
+class TestESFacetedSearchListView(TestESFacetedSearchView):
+    def test_paginator_in_context(self):
+        request = self.factory.get("/")
+        response = UsersFacetedSearchListView.as_view()(request)
+        assert "paginator" in response.context_data
+        assert "page_obj" in response.context_data
+
+    def test_paginate_by(self):
+        request = self.factory.get("/")
+        response = UsersFacetedSearchListView.as_view()(request)
+        assert len(response.context_data["object_list"]) == 5
+
+    def test_num_pages(self):
+        request = self.factory.get("/")
+        response = UsersFacetedSearchListView.as_view()(request)
+        assert response.context_data["paginator"].num_pages == 2
+
+    def test_page_1_results(self):
+        request = self.factory.get("/", {"page": 1})
+        response = UsersFacetedSearchListView.as_view()(request)
+        assert len(response.context_data["object_list"]) == 5
+        assert response.context_data["object_list"][0].username == "john_doe"
+        assert response.context_data["object_list"][1].username == "jane_smith"
+        assert response.context_data["object_list"][2].username == "alice_johnson"
+        assert response.context_data["object_list"][3].username == "bob_brown"
+        assert response.context_data["object_list"][4].username == "emma_williams"
+
+    def test_page_2_results(self):
+        request = self.factory.get("/", {"page": 2})
+        response = UsersFacetedSearchListView.as_view()(request)
+        assert len(response.context_data["object_list"]) == 5
+        assert response.context_data["object_list"][0].username == "william_jones"
+        assert response.context_data["object_list"][1].username == "olivia_davis"
+        assert response.context_data["object_list"][2].username == "liam_taylor"
+        assert response.context_data["object_list"][3].username == "ava_wilson"
+        assert response.context_data["object_list"][4].username == "noah_evans"
+
+    def test_page_3_raises_404(self):
+        request = self.factory.get("/", {"page": 3})
+        with self.assertRaises(Http404):
+            UsersFacetedSearchListView.as_view()(request)
