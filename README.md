@@ -60,7 +60,7 @@ As you can see, the implementation is quite straight forward, you define the doc
 
 #### FacetedSearchForm
 
-The FacetedSearchForm is a very simple subclass of Django's default Form class. It has a method `get_es_facets` that returns all `FacetField` on the form, which is then later used within the `ESFacetedSearchView` to populate the available choices for each `FacetField`
+The FacetedSearchForm is a very simple subclass of Django's default Form class. It has a method `get_es_facets` that returns a dictionary of facets which can be passed to the `DynamicFacetedSearch` class. It also has some helper methods that you can use to render your form: `get_facet_fields` `get_filter_fields` `get_sort_fields` & `get_regular_fields`, the names speaks for themselves. Those methods could be useful, as most likely you'll render those types of fields in groups.
 
 #### FacetField, TermsFacetField, RangeFacetField, FilterField & SortField
 
