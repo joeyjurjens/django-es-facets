@@ -1,11 +1,12 @@
 import logging
 
-from django.views.generic import View
+from django.views.generic import View, ListView
 from django.views.generic.base import ContextMixin
 
 from .faceted_search import DynamicFacetedSearch
 from .forms import FacetedSearchForm
 from .fields import FacetField, FilterField, SortField
+from .paginator import ESPaginator
 
 logger = logging.getLogger(__name__)
 
@@ -224,3 +225,58 @@ class ESFacetedSearchView(ContextMixin, View):
                 field.process_facet_buckets(
                     self.request, es_response.facets[field.es_field]
                 )
+
+
+# pylint: disable=too-many-ancestors
+class ESFacetedSearchListView(ListView, ESFacetedSearchView):
+    paginator_class = ESPaginator
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        doc_types = self.get_faceted_search_class().doc_types
+        if not doc_types or len(doc_types) > 1:
+            raise ValueError(
+                "In order to use the ESFacetedSearchListView, the search_class must have exactly one doc_type."
+            )
+
+    def get_paginator(
+        self, queryset, per_page, orphans=0, allow_empty_first_page=True, **kwargs
+    ):
+        """
+        Pass the elasticsearch response to the paginator.
+        """
+        return self.paginator_class(
+            self.get_es_response(),
+            queryset,
+            per_page,
+            orphans=orphans,
+            allow_empty_first_page=allow_empty_first_page,
+            **kwargs,
+        )
+
+    def paginate_queryset(self, queryset, page_size):
+        """
+        This method is overidden to return the orignal passed queryset rather than the paginated queryset.
+        This because we paginated the elasticsearch response, and this response is used to create the queryset
+        and thus we don't have to paginate the queryset anymore.
+        """
+        paginator, page, _, is_paginated = super().paginate_queryset(
+            queryset, page_size
+        )
+        return paginator, page, queryset, is_paginated
+
+    def get_queryset(self):
+        es_response = self.get_es_response()
+        # pylint: disable=protected-access
+        qs = es_response._search.to_queryset()
+        return qs
+
+    def get_faceted_search(self):
+        faceted_search = super().get_faceted_search()
+        page = (
+            self.kwargs.get(self.page_kwarg)
+            or self.request.GET.get(self.page_kwarg)
+            or 1
+        )
+        faceted_search.set_pagination(page=int(page), page_size=self.paginate_by)
+        return faceted_search
