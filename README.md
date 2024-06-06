@@ -215,9 +215,9 @@ CHOICES = [
 
 You can read more about it [here](https://elasticsearch-dsl.readthedocs.io/en/latest/search_dsl.html#sorting).
 
-#### ESFacetedSearchView
+#### ESFacetedSearchView & ESFacetedSearchListView
 
-The `ESFacetedSearchView` is a generic view you can use to create a view for faceted search. In order to use this view, you must set the `form_class` and `faceted_search_class` attributes.
+The `ESFacetedSearchView` and `ESFacetedSearchListView` are generic views you can use to create a views for faceted search. In order to use those views, you must set the `form_class` and `faceted_search_class` attributes.
 
 ```python
 class CatalogueView(ESFacetedSearchView):
@@ -235,9 +235,9 @@ class CatalogueView(ESFacetedSearchView):
         return self.request.GET.get("search_query")
 ```
 
-If you want to only search within specific fields, you can set that on your `FacetedSearch` class:
-```python
-class CatalogueFacetedSearch(DynamicFacetedSearch):
-    fields = ["title^3", "upc^5", "description"]
-```
-As you can see, you can also boost fields if you want by adding the `^` symbol followed by the boost value.
+Then we have the `ESFacetedSearchListView`, which is a subclass of `ESFacetedSearchView` and Django's `ListView`. It allows you to easily create a list view based on the elasticsearch response. The response is converted to a queryset (this is a feature from `django-elasticsearch-dsl`) and it has a custom paginator to make use of the elasticsearch response for some parts.
+
+In order to use `ESFacetedSearchListView`, you have to meet the following requirements:
+
+- Your `search_class` must have only one Document in the doc_types list.
+- The Document inside the doc_types list must be a subclass of `django-elasticsearch-dsl` Document, as it requires you to set a Django model which is needed to be able to call the `to_queryset` method.

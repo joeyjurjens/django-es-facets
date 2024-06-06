@@ -149,9 +149,6 @@ class DynamicFacetedSearch(FacetedSearch):
         """
         if len(self.doc_types) > 1:
             model = None
-            logger.warning(
-                "Your FacetedSearch class has no or multiple doc_types, this means you can NOT use the to_queryset method"
-            )
         else:
             model = self.doc_types[0].Django.model
 
