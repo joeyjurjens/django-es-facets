@@ -27,8 +27,8 @@ class DynamicFacetedSearch(FacetedSearch):
     doc_types = []
     default_filter_queries = []
 
-    # pylint: disable=too-many-arguments, dangerous-default-value
-    def __init__(self, facets, query=None, filters=None, sort=[], page=1, page_size=10):
+    # pylint: disable=too-many-arguments
+    def __init__(self, facets, query=None, filters=None, sort=(), page=1, page_size=10):
         """
         Initialize the DynamicFacetedSearch with dynamic facets and pagination.
 
@@ -36,7 +36,7 @@ class DynamicFacetedSearch(FacetedSearch):
             facets (dict): Facet fields.
             query (str, optional): Query string.
             filters (dict, optional): Dictionary of filters. Defaults to {}.
-            sort (list, optional): List of sort fields. Defaults to [].
+            sort (tuple, optional): Tuplce of sort fields. Defaults to ().
             page (int, optional): Page number for pagination. Defaults to 1.
             page_size (int, optional): Number of results per page. Defaults to 10.
 
