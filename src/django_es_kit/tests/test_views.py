@@ -86,6 +86,7 @@ class UsersFacetedSearchView(ESFacetedSearchView):
     form_class = UsersFacetedSearchForm
 
 
+# pylint: disable=too-many-ancestors
 class UsersFacetedSearchListView(ESFacetedSearchListView):
     faceted_search_class = UsersFacetetedSearch
     form_class = UsersFacetedSearchForm
