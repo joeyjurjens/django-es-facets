@@ -97,6 +97,8 @@ Those fields are just regular form fields you are used to from Django, except th
     - This is the type within Elasticsearch for said field, this is required as we get the values as strings when users filter on them (GET params)
 - `formatter` (**optional**)
     - This allows you to format the label being rendered for the available facet options.
+- `size` (**optional**)
+    - This allows you to specify the amount of facets to return (defaults to 10)
 
 And the `RangeFacetField` also has a `ranges` argument which is **required**. The ranges are a list of `RangeOption` or `dict`.
 

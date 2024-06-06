@@ -17,11 +17,12 @@ class FacetField(forms.MultipleChoiceField):
         es_field (str): The name of the field in the Elasticsearch index.
         field_type (type): The type of the field (e.g., int, str, bool).
         formatter (callable, optional): A function that formats the facet values.
+        size (int): The number of facet values to return, defaults to 10.
     """
 
     widget = forms.CheckboxSelectMultiple
 
-    def __init__(self, es_field, field_type, formatter=None, **kwargs):
+    def __init__(self, es_field, field_type, formatter=None, size=10, **kwargs):
         """
         Initialize the FacetField.
 
@@ -34,6 +35,7 @@ class FacetField(forms.MultipleChoiceField):
         self.es_field = es_field
         self.field_type = field_type
         self.formatter = formatter
+        self.size = size
         if "required" not in kwargs:
             kwargs["required"] = False
         super().__init__(**kwargs)
@@ -134,7 +136,7 @@ class TermsFacetField(FacetField):
         Returns:
             TermsFacet: The Elasticsearch terms facet.
         """
-        return TermsFacet(field=self.es_field)
+        return TermsFacet(field=self.es_field, size=self.size)
 
 
 class RangeOption(dict):
@@ -203,7 +205,7 @@ class RangeFacetField(FacetField):
             (key, (range_.get("from"), range_.get("to")))
             for key, range_ in self.ranges.items()
         ]
-        return RangeFacet(field=self.es_field, ranges=ranges)
+        return RangeFacet(field=self.es_field, ranges=ranges, size=self.size)
 
     def process_facet_buckets(self, request, buckets):
         """
