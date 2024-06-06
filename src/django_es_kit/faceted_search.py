@@ -17,7 +17,7 @@ class DynamicFacetedSearch(FacetedSearch):
        can also in return be populated from the database.
     2. Allow defining default query filters on the class (`default_filter_queries`)
     3. Allow dynamically adding extra query filters (`add_filter_query`)
-    4. Allow pagination on the search results (`set_pagination` or `page` & `page_size` arguments)
+    4. Allow pagination on the search results (`set_pagination`)
 
     Attributes:
         doc_types (list): List of document types for the search.
@@ -27,29 +27,22 @@ class DynamicFacetedSearch(FacetedSearch):
     doc_types = []
     default_filter_queries = []
 
-    # pylint: disable=too-many-arguments
-    def __init__(self, facets, query=None, filters=None, sort=(), page=1, page_size=10):
+    def __init__(self, facets, query=None, filters=None, sort=()):
         """
         Initialize the DynamicFacetedSearch with dynamic facets and pagination.
 
         Args:
             facets (dict): Facet fields.
             query (str, optional): Query string.
-            filters (dict, optional): Dictionary of filters. Defaults to {}.
+            filters (dict, optional): Dictionary of filters. Defaults to None.
             sort (tuple, optional): Tuplce of sort fields. Defaults to ().
-            page (int, optional): Page number for pagination. Defaults to 1.
-            page_size (int, optional): Number of results per page. Defaults to 10.
-
-        Raises:
-            ValueError: If `page` or `page_size` are not positive integers.
         """
         if filters is None:
             filters = {}
         self.facets = facets
         self.filter_queries = []
-        self._validate_pagination(page, page_size)
-        self.page = page
-        self.page_size = page_size
+        self.page = None
+        self.page_size = None
         super().__init__(query=query, filters=filters, sort=sort)
 
     def _validate_pagination(self, page, page_size):
@@ -187,7 +180,8 @@ class DynamicFacetedSearch(FacetedSearch):
             Search: The search object with pagination applied.
         """
         s = super().build_search()
-        s = self.paginate(s)
+        if self.page and self.page_size:
+            s = self.paginate(s)
         return s
 
     def execute(self):
