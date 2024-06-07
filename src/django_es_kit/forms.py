@@ -41,44 +41,32 @@ class FacetedSearchForm(forms.Form):
 
     def get_facet_fields(self):
         """
-        Retrieve all facet fields from the form.
-
-        Returns:
-            list: A list of `FacetField` instances.
+        Yield all facet fields from the form (so you can iterate over them like you do for normal fields).
         """
-        return [
-            field for field in self.fields.values() if isinstance(field, FacetField)
-        ]
+        for field_name, field in self.fields.items():
+            if isinstance(field, FacetField):
+                yield self[field_name]
 
     def get_filter_fields(self):
         """
-        Retrieve all filter fields from the form.
-
-        Returns:
-            list: A list of `FilterField` instances.
+        Yield all filter fields from the form (so you can iterate over them like you do for normal fields).
         """
-        return [
-            field for field in self.fields.values() if isinstance(field, FilterField)
-        ]
+        for field_name, field in self.fields.items():
+            if isinstance(field, FilterField):
+                yield self[field_name]
 
     def get_sort_fields(self):
         """
-        Retrieve all sort fields from the form.
-
-        Returns:
-            list: A list of `SortField` instances.
+        Yield all sort fields from the form (so you can iterate over them like you do for normal fields).
         """
-        return [field for field in self.fields.values() if isinstance(field, SortField)]
+        for field_name, field in self.fields.items():
+            if isinstance(field, SortField):
+                yield self[field_name]
 
     def get_regular_fields(self):
         """
-        Retrieve all regular fields from the form.
-
-        Returns:
-            list: A list of regular form fields.
+        Yield all regular fields from the form (so you can iterate over them like you do for normal fields).
         """
-        return [
-            field
-            for field in self.fields.values()
-            if not isinstance(field, (FacetField, FilterField, SortField))
-        ]
+        for field_name, field in self.fields.items():
+            if not isinstance(field, (FacetField, FilterField, SortField)):
+                yield self[field_name]
