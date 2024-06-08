@@ -119,6 +119,9 @@ class ESFacetedSearchView(ContextMixin, View):
         """
         return self.form_class
 
+    def get_form_kwargs(self):
+        return {}
+
     def get_form(self):
         """
         Get the form instance.
@@ -130,13 +133,14 @@ class ESFacetedSearchView(ContextMixin, View):
             return self._form
 
         form_class = self.get_form_class()
+        form_kwargs = self.get_form_kwargs()
         if self.request.GET:
             # pylint: disable=not-callable
-            self._form = form_class(self.request.GET)
+            self._form = form_class(self.request.GET, **form_kwargs)
             return self._form
 
         # pylint: disable=not-callable
-        self._form = form_class()
+        self._form = form_class(**form_kwargs)
         return self._form
 
     def get_es_response(self):
